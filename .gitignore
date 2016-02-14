@@ -1,0 +1,20 @@
+*~
+*.exe
+*.bak
+*.txt
+*.zip
+*.7z
+
+
+# vi
+.*.swp
+
+
+# golang
+bin
+pkg
+
+
+# 17mon
+*.dat
+*.datx
