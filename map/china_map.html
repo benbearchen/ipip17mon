@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>China Map中国地图</title>
+    <script src="./d3.v3.min.js"></script>
+</head>
+<body>
+<script type="text/javascript">
+    //创建svg
+    var width = 1280, height = 800;
+
+    var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+    //创建投影(projection)
+    var projection = d3.geo.mercator().translate([width / 2, height / 2]).center([105, 38]).scale(850);
+
+    //创建path
+    var path = d3.geo.path().projection(projection);
+
+    //解析json
+    d3.json("china.geo.json", function(json) {
+
+        svg.selectAll("path")
+                .data(json.features)
+                .enter()
+                .append("path")
+                .attr("d", path)
+                .on('mouseover', function(data) {
+                    d3.select(this).attr('fill', 'rgba(2,2,139,0.61)');
+
+                    //创建显示tooltip用的矩形
+                    svg.append("rect")
+                            .attr("id", "tooltip1")
+                            .attr("x", 50)
+                            .attr("y",50)
+                            .attr("width",140)
+                            .attr("height",130)
+                            .attr("stroke","black")
+                            .attr("fill","none")
+                    ;
+
+                    var p = data.properties.name;
+                    //创建显示tooltip文本
+                    svg.append("text")
+                            .attr("id", "tooltip2")
+                            .attr("x", 100)
+                            .attr("y", 100)
+                            .attr("text-anchor", "middle")
+                            .attr("font-family", "sans-serif")
+                            .attr("font-size", "11px")
+                            .attr("font-weight", "bold")
+                            .attr("fill", "black")
+                            .text(p);
+
+                    if (provinceCount.hasOwnProperty(p)) {
+                        var c = provinceCount[p];
+
+                        svg.append("text")
+                            .attr("id", "tooltip2")
+                            .attr("x", 100)
+                            .attr("y", 130)
+                            .attr("text-anchor", "middle")
+                            .attr("font-size", "11px")
+                            .text(c);
+                    }
+                })
+                .on('mouseout', function(data) {
+                    d3.select(this).attr('fill', 'rgba(128,124,139,0.61)');
+                    //Remove the tooltip
+                    d3.select("#tooltip1").remove();
+                    d3.selectAll("#tooltip2").remove();
+                })
+                .attr('fill', 'rgba(128,124,139,0.61)')
+                .attr('stroke', 'rgba(255,255,255,1)')
+                .attr('stroke-width', 1)
+        ;
+    });
+
+function testDots() {
+    var coords = [[113.760234, 23.048884, "广东", "东莞", 50], [113.280637, 23.125178, "广东", "广州", 100], [113.280637, 23.125178, "广东", "广州", 1000000], [110.299121, 25.274215, "广西", "桂林", 5], [120.153576, 30.287459, "浙江", "杭州", 200], [114.085947, 22.547, "广东", "深圳", 105000], [114.412599, 21.079404, "广东", "AA", 5000000], [114.412599, 22.079404, "广东", "BB", 500000], [114.412599, 23.079404, "广东", "惠州", 50000], [114.412599, 24.079404, "广东", "A", 5000], [114.412599, 25.079404, "广东", "B", 500], [114.412599, 26.079404, "广东", "C", 50]];
+    dots("dot1", coords);
+}
+
+function coordKey(c) {
+    var r = 100000;
+    var x = Math.round(c[0] * r);
+    var y = Math.round(c[1] * r);
+    return x + "," + y;
+}
+
+var provinceCount = {};
+
+function dots(id, coords) {
+    var unique = {};
+    var counts = {};
+    for (i = 0; i < coords.length; i++) {
+        var key = coordKey(coords[i]);
+        var c = 1;
+        if (coords[i].length > 4) {
+            c = coords[i][4];
+        }
+
+        if (counts.hasOwnProperty(key)) {
+            counts[key] = counts[key]+c;
+        } else {
+            counts[key] = c;
+            unique[key] = coords[i];
+        }
+    }
+
+    var dataset = [];
+    for (i in unique) {
+        var coord = projection(unique[i]);
+        var x = coord[0];
+        var y = coord[1];
+        var s = counts[i];
+        //var r = Math.atan(s / 10000) * 3 + 1;
+        var r = Math.log(s / 1000 + 3);
+        var city = unique[i][3];
+
+        var p = unique[i][2];
+        if (provinceCount.hasOwnProperty(p)) {
+            provinceCount[p] += s;
+        } else {
+            provinceCount[p] = s;
+        }
+
+        dataset.push([i, x, y, r, city, s]);
+    }
+
+    dataset.sort(function(a,b) { return b[5]-a[5]; }); // 排序，这样小的点会在大的上面……
+
+    svg.selectAll("ellipse")
+        .data(dataset,function(d){ return d[0]; })
+        .enter()
+        .append("ellipse")
+        .attr("cx",function(d){ return d[1]; })
+        .attr("cy",function(d){ return d[2]; })
+        .attr("rx",function(d){ return d[3]+1; })
+        .attr("ry",function(d){ return d[3]+1; })
+        .attr("id",id)
+        .style({fill: 'pink', stroke: 'green', 'stroke-width': 1, 'fill-opacity': .6 })
+        .on('mouseover', function(data) {
+                d3.select(this).style({'fill-opacity': 1});
+
+                //创建显示tooltip用的矩形
+                svg.append("rect")
+                .attr("id", "tooltip1")
+                .attr("x", 50)
+                .attr("y",50)
+                .attr("width",140)
+                .attr("height",130)
+                .attr("stroke","black")
+                .attr("fill","none");
+
+                //创建显示tooltip文本
+                svg.append("text")
+                .attr("id", "tooltip2")
+                .attr("x", 100)
+                .attr("y", 100)
+                .attr("text-anchor", "middle")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "11px")
+                .attr("font-weight", "bold")
+                .attr("fill", "black")
+                .text(data[4]);
+
+                svg.append("text")
+                    .attr("id", "tooltip2")
+                    .attr("x", 100)
+                    .attr("y", 130)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "11px")
+                    .text(data[5]);
+        })
+    .on('mouseout', function(data) {
+            d3.select(this).style({'fill-opacity': .6});
+
+            //Remove the tooltip
+            d3.select("#tooltip1").remove();
+            d3.selectAll("#tooltip2").remove();
+            });
+}
+
+function testRemove() {
+    removeDots("dot1");
+}
+
+function removeDots(id) {
+    d3.selectAll("#" + id).remove();
+}
+
+</script>
+<input type="button" value="dot" onclick="testDots()" />
+<input type="button" value="remove" onclick="testRemove()" />
+感谢 <a  href="http://waylau.com/svg-demo-china-map/" target="_blank">www.waylau.com</a>
+</body>
+</html>
