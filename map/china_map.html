@@ -81,8 +81,12 @@
     });
 
 function testDots() {
-    var coords = [[113.760234, 23.048884, "广东", "东莞", 50], [113.280637, 23.125178, "广东", "广州", 100], [113.280637, 23.125178, "广东", "广州", 1000000], [110.299121, 25.274215, "广西", "桂林", 5], [120.153576, 30.287459, "浙江", "杭州", 200], [114.085947, 22.547, "广东", "深圳", 105000], [114.412599, 21.079404, "广东", "AA", 5000000], [114.412599, 22.079404, "广东", "BB", 500000], [114.412599, 23.079404, "广东", "惠州", 50000], [114.412599, 24.079404, "广东", "A", 5000], [114.412599, 25.079404, "广东", "B", 500], [114.412599, 26.079404, "广东", "C", 50]];
+    var coords = [[113.760234, 23.048884, "广东", "东莞", 50], [113.280637, 23.125178, "广东", "广州", 100], [113.280637, 23.125178, "广东", "广州", 1000000], [110.299121, 25.274215, "广西", "桂林", 5], [120.153576, 30.287459, "浙江", "杭州", 200], [122.153576, 28.287459, "浙江", "宁波", 1000], [114.085947, 22.547, "广东", "深圳", 105000], [114.412599, 22.079404, "广东", "BB", 500000], [114.412599, 23.079404, "广东", "惠州", 50000], [114.412599, 24.079404, "广东", "A", 5000], [114.412599, 25.079404, "广东", "B", 500], [114.412599, 26.079404, "广东", "C", 50]];
+
+    drawProvince("dot1", coords);
     dots("dot1", coords);
+
+    sector(100, 100, 50, 90, 180, {fill: 'pink', stroke: 'none', 'stroke-width': 1, 'fill-opacity': .6 });
 }
 
 function coordKey(c) {
@@ -186,12 +190,163 @@ function dots(id, coords) {
             });
 }
 
+function makeColors(c) {
+    if (c <= 2) {
+        return ["blue", "red"];
+    } else {
+        var colors = [];
+        for (; c >= 2; c -= 2) {
+            colors.push("blue");
+            colors.push("red");
+        }
+
+        if (c > 0) {
+            colors.push("white");
+        }
+
+        return colors;
+    }
+}
+
+function drawProvince(id, datas) {
+    var ps = {};
+    for (var i in datas) {
+        var data = datas[i];
+        var p = data[2];
+        data = [data[0], data[1], data[2], data[3], data[4]];
+        if (!ps.hasOwnProperty(p)) {
+            ps[p] = [data];
+        } else {
+            for (var j in ps[p]) {
+                if (ps[p][j][3] == data[3]) {
+                    ps[p][j][4] += 1 * data[4];
+                    data = null;
+                    break;
+                }
+            }
+
+            if (data != null) {
+                ps[p].push(data);
+            }
+        }
+    }
+
+    var ss = [];
+    for (var i in ps) {
+        var p = ps[i];
+        p.sort(function(a,b) { return b[4]-a[4]; });
+        var sum = 0;
+        var cx = 0;
+        var cy = 0;
+        for (var j in p) {
+            var c = 1 * p[j][4];
+            sum += c;
+            var coord = projection([p[j][0], p[j][1]]);
+            cx += coord[0] * c;
+            cy += coord[1] * c;
+        }
+
+        if (sum <= 0) {
+            continue;
+        }
+
+        cx /= sum;
+        cy /= sum;
+        var r = Math.sqrt(sum / 1000) + 10;
+
+        var d = 1;
+        if (p.length > 50) {
+            d = 50 / p.length;
+        }
+
+        var colors = makeColors(p.length);
+        var acc = 90;
+        for (var j in p) {
+            var city = p[j];
+            var end = acc;
+            var c = 1 * city[4];
+            acc -= c * (360 - p.length * d) / sum + d;
+            var start = acc;
+
+            var color = colors[j];
+
+            if (p.length == 1) {
+                end -= 0.01;
+            }
+
+            ss.push([cx, cy, r, start, end, color, city[3], c]);
+        }
+    }
+
+    svg.selectAll("path")
+            .data(ss,function(data){return data[6];})
+            .enter()
+            .append("path")
+            .attr("d", function(data) { return sector(data[0], data[1], data[2], data[3], data[4]); })
+            .attr("id", id)
+            .on('mouseover', function(data) {
+                d3.select(this).attr('fill', 'yellow');
+
+                //创建显示tooltip用的矩形
+                svg.append("rect")
+                        .attr("id", "tooltip1")
+                        .attr("x", 50)
+                        .attr("y",50)
+                        .attr("width",140)
+                        .attr("height",130)
+                        .attr("stroke","black")
+                        .attr("fill","none")
+                ;
+
+                //创建显示tooltip文本
+                svg.append("text")
+                        .attr("id", "tooltip2")
+                        .attr("x", 100)
+                        .attr("y", 100)
+                        .attr("text-anchor", "middle")
+                        .attr("font-family", "sans-serif")
+                        .attr("font-size", "11px")
+                        .attr("font-weight", "bold")
+                        .attr("fill", "black")
+                        .text(data[6]);
+
+                svg.append("text")
+                    .attr("id", "tooltip2")
+                    .attr("x", 100)
+                    .attr("y", 130)
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "11px")
+                    .text(data[7]);
+            })
+            .on('mouseout', function(data) {
+                d3.select(this).attr('fill', data[5]);
+                //Remove the tooltip
+                d3.select("#tooltip1").remove();
+                d3.selectAll("#tooltip2").remove();
+            })
+            .attr('fill', function(data){return data[5];})
+            .attr('stroke', 'none')
+            .attr('stroke-width', 1)
+            .attr('fill-opacity', .25)
+    ;
+}
+
 function testRemove() {
     removeDots("dot1");
 }
 
 function removeDots(id) {
     d3.selectAll("#" + id).remove();
+}
+
+var rad = Math.PI / 180;
+
+function sector(cx, cy, r, startAngle, endAngle) {
+    var x1 = cx + r * Math.cos(-startAngle * rad),
+        x2 = cx + r * Math.cos(-endAngle * rad),
+        y1 = cy + r * Math.sin(-startAngle * rad),
+        y2 = cy + r * Math.sin(-endAngle * rad);
+    return ["M", cx, cy, "L", x1, y1, "A", r, r, 0, +(endAngle - startAngle > 180), 0, x2, y2, "z"].join(" ");
 }
 
 </script>
