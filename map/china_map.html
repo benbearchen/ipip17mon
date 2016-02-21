@@ -123,7 +123,7 @@ function dots(id, coords) {
         var y = coord[1];
         var s = counts[i];
         //var r = Math.atan(s / 10000) * 3 + 1;
-        var r = Math.log(s / 1000 + 3);
+        var r = Math.log(s / 100 + 3);
         var city = unique[i][3];
 
         var p = unique[i][2];
@@ -138,18 +138,52 @@ function dots(id, coords) {
 
     dataset.sort(function(a,b) { return b[5]-a[5]; }); // 排序，这样小的点会在大的上面……
 
-    svg.selectAll("ellipse")
+    for (i in dataset) {
+        var d = dataset[i];
+        var defs = svg.append("defs");
+             
+        var g = defs.append("radialGradient")
+            .attr("gradientUnits", "userSpaceOnUse")
+            .attr("id","rg" + d[0])
+            .attr("cx",d[1])
+            .attr("cy",d[2])
+            .attr("r",d[3]);
+ 
+        var stop1 = g.append("stop")
+            .attr("offset","0%")
+            .style("stop-color", "rgba(0,255,0,1)");
+        var stop2 = g.append("stop")
+            .attr("offset","66%")
+            .style("stop-color", "rgba(0,255,0,0.75)");
+        var stop3 = g.append("stop")
+            .attr("offset","100%")
+            .style("stop-color", "rgba(0,255,0,0)");
+    }
+
+    var g = svg.selectAll("g")
         .data(dataset,function(d){ return d[0]; })
         .enter()
-        .append("ellipse")
+        .append("g");
+
+    g.append("ellipse")
         .attr("cx",function(d){ return d[1]; })
         .attr("cy",function(d){ return d[2]; })
         .attr("rx",function(d){ return d[3]+1; })
         .attr("ry",function(d){ return d[3]+1; })
         .attr("id",id)
-        .style({fill: 'pink', stroke: 'green', 'stroke-width': 1, 'fill-opacity': .6 })
+        .style("fill", function(d) {
+                return "url(#rg" + d[0] + ")";
+        });
+
+    g.append("ellipse")
+        .attr("cx",function(d){ return d[1]; })
+        .attr("cy",function(d){ return d[2]; })
+        .attr("rx",1.5)
+        .attr("ry",1.5)
+        .attr("id",id)
+        .style({fill: 'red', stroke: 'none', 'stroke-width': 1, 'fill-opacity': 1 })
         .on('mouseover', function(data) {
-                d3.select(this).style({'fill-opacity': 1});
+                d3.select(this).style({});
 
                 //创建显示tooltip用的矩形
                 svg.append("rect")
@@ -182,7 +216,7 @@ function dots(id, coords) {
                     .text(data[5]);
         })
     .on('mouseout', function(data) {
-            d3.select(this).style({'fill-opacity': .6});
+            d3.select(this).style({});
 
             //Remove the tooltip
             d3.select("#tooltip1").remove();
