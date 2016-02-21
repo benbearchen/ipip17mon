@@ -285,7 +285,9 @@ function drawProvince(id, datas) {
             .attr("d", function(data) { return sector(data[0], data[1], data[2], data[3], data[4]); })
             .attr("id", id)
             .on('mouseover', function(data) {
-                d3.select(this).attr('fill', 'yellow');
+                d3.select(this).attr('fill', 'yellow')
+                    .attr({transform: "scale(1.1) translate(-" + data[0] / 11 + ",-" + data[1] / 11 + ")"})
+                    .attr({'fill-opacity': .8});
 
                 //创建显示tooltip用的矩形
                 svg.append("rect")
@@ -319,7 +321,8 @@ function drawProvince(id, datas) {
                     .text(data[7]);
             })
             .on('mouseout', function(data) {
-                d3.select(this).attr('fill', data[5]);
+                d3.select(this).attr('fill', data[5]).attr({transform: ""})
+                    .attr('fill-opacity', .25);
                 //Remove the tooltip
                 d3.select("#tooltip1").remove();
                 d3.selectAll("#tooltip2").remove();
