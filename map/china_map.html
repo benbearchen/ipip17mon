@@ -163,14 +163,14 @@ function dots(id, coords) {
     var g = svg.selectAll("g")
         .data(dataset,function(d){ return d[0]; })
         .enter()
-        .append("g");
+        .append("g")
+        .attr("id",id);
 
     g.append("ellipse")
         .attr("cx",function(d){ return d[1]; })
         .attr("cy",function(d){ return d[2]; })
         .attr("rx",function(d){ return d[3]+1; })
         .attr("ry",function(d){ return d[3]+1; })
-        .attr("id",id)
         .style("fill", function(d) {
                 return "url(#rg" + d[0] + ")";
         });
@@ -180,7 +180,6 @@ function dots(id, coords) {
         .attr("cy",function(d){ return d[2]; })
         .attr("rx",1.5)
         .attr("ry",1.5)
-        .attr("id",id)
         .style({fill: 'red', stroke: 'none', 'stroke-width': 1, 'fill-opacity': 1 })
         .on('mouseover', function(data) {
                 d3.select(this).style({});
@@ -386,9 +385,14 @@ function sector(cx, cy, r, startAngle, endAngle) {
     return ["M", cx, cy, "L", x1, y1, "A", r, r, 0, +(endAngle - startAngle > 180), 0, x2, y2, "z"].join(" ");
 }
 
+function hideDots() {
+    d3.selectAll("#dot1").transition().duration(1000).style({"opacity": 0}).remove();
+}
+
 </script>
 <input type="button" value="dot" onclick="testDots()" />
 <input type="button" value="remove" onclick="testRemove()" />
+<input type="button" value="hide&remove" onclick="hideDots()" />
 感谢 <a  href="http://waylau.com/svg-demo-china-map/" target="_blank">www.waylau.com</a>
 </body>
 </html>
